@@ -1,0 +1,27 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "geraintwhite@gmail.com",
+    "enableMultiJS": true,
+    "longName": "TAMAGOTCHI",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/creature.png",
+                "name": "CREATURE",
+                "targetPlatforms": null,
+                "type": "bitmap"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "TAMAGOTCHI",
+    "uuid": "026e3bb9-a6b0-45da-b399-a1e44eeb37c2",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
