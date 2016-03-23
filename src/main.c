@@ -8,7 +8,7 @@ static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_CREATURE);
+  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_IDLE1);
 
   s_bitmap_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);

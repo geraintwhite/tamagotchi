@@ -10,8 +10,8 @@
     "resources": {
         "media": [
             {
-                "file": "images/creature.png",
-                "name": "CREATURE",
+                "file": "images/001-sprat-idle1.png",
+                "name": "001_SPRAT_IDLE1",
                 "targetPlatforms": null,
                 "type": "bitmap"
             }
