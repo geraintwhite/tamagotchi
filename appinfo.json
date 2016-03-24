@@ -18,6 +18,11 @@
                 "file": "images/001-sprat-idle2.png",
                 "name": "001_SPRAT_IDLE2",
                 "type": "png"
+            },
+            {
+                "file": "images/001-sprat-egg.png",
+                "name": "001_SPRAT_EGG",
+                "type": "png"
             }
         ]
     },

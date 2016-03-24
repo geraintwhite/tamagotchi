@@ -29,10 +29,51 @@ static void change_creature_state() {
   app_timer_register(500, change_creature_state, NULL);
 }
 
+static Animation * create_animation(struct GRect s) {
+  int r = (rand() % 11) - 5;
+  GRect end = GRect(s.origin.x + r, s.origin.y, s.size.w, s.size.h);
+
+  PropertyAnimation *prop_anim = property_animation_create_layer_frame((Layer*)s_bitmap_layer, &s, &end);
+  Animation *anim = property_animation_get_animation(prop_anim);
+
+  int delay_ms = 0;
+  int duration_ms = rand() % 50 + 50;
+
+  animation_set_curve(anim, AnimationCurveLinear);
+  animation_set_delay(anim, delay_ms);
+  animation_set_duration(anim, duration_ms);
+  return anim;
+}
+
+static void start_egg_sequence() {
+  gbitmap_destroy(s_bitmap);
+  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_EGG);
+  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+  layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
+
+  int closeness_to_hatching = 1500;
+
+  GRect start = GRect(0, 30, 144, 168);
+  Animation *anim0 = create_animation(start);
+  Animation *anim1 = create_animation(start);
+  Animation *anim2 = create_animation(start);
+  Animation *anim3 = create_animation(start);
+  Animation *anim4 = create_animation(start);
+
+  Animation *final_anim = animation_sequence_create(anim0, anim1, anim2, anim3, anim4, NULL);
+
+
+  animation_schedule(final_anim);
+  app_timer_register(closeness_to_hatching, start_egg_sequence, NULL);
+}
+
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
+  // Make the egg show slightly lower
+  GRect egg_bounds = (GRect(0, 30, bounds.size.w, bounds.size.h));
 
+  // Time stuff
   s_time_layer = text_layer_create(GRect(0, 8, bounds.size.w, 50));
 
   text_layer_set_background_color(s_time_layer, GColorClear);
@@ -43,9 +84,11 @@ static void main_window_load(Window *window) {
 
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
 
-  s_bitmap_layer = bitmap_layer_create(bounds);
+  // s_bitmap_layer = bitmap_layer_create(bounds);
+  s_bitmap_layer = bitmap_layer_create(egg_bounds);
 
-  change_creature_state();
+  //change_creature_state();
+  start_egg_sequence();
 
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
   layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
