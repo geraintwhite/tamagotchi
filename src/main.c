@@ -9,12 +9,11 @@ static int current_state = 0;
 
 static void change_creature_state() {
   current_state = (current_state + 1) % (sizeof(creature_states) / sizeof(uint32_t));
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "current_state %d", current_state);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "current_creature %d", (int) creature_states[current_state]);
   gbitmap_destroy(s_bitmap);
   s_bitmap = gbitmap_create_with_resource(creature_states[current_state]);
   bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
-  app_timer_register(1000, change_creature_state, NULL);
+  layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
+  app_timer_register(500, change_creature_state, NULL);
 }
 
 static void main_window_load(Window *window) {
