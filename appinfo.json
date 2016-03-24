@@ -12,8 +12,12 @@
             {
                 "file": "images/001-sprat-idle1.png",
                 "name": "001_SPRAT_IDLE1",
-                "targetPlatforms": null,
-                "type": "bitmap"
+                "type": "png"
+            },
+            {
+                "file": "images/001-sprat-idle2.png",
+                "name": "001_SPRAT_IDLE2",
+                "type": "png"
             }
         ]
     },

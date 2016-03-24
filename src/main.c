@@ -4,14 +4,27 @@ static Window *s_main_window;
 static GBitmap *s_bitmap;
 static BitmapLayer *s_bitmap_layer;
 
+static uint32_t creature_states[2] = {RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2};
+static int current_state = 0;
+
+static void change_creature_state() {
+  current_state = (current_state + 1) % (sizeof(creature_states) / sizeof(uint32_t));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "current_state %d", current_state);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "current_creature %d", (int) creature_states[current_state]);
+  gbitmap_destroy(s_bitmap);
+  s_bitmap = gbitmap_create_with_resource(creature_states[current_state]);
+  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+  app_timer_register(1000, change_creature_state, NULL);
+}
+
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_IDLE1);
-
   s_bitmap_layer = bitmap_layer_create(bounds);
-  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+
+  change_creature_state();
+
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
   layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
 }
@@ -23,7 +36,7 @@ static void main_window_unload(Window *window) {
 
 static void init() {
   s_main_window = window_create();
-  window_set_background_color(s_main_window, COLOR_FALLBACK(GColorBlue, GColorBlack));
+  window_set_background_color(s_main_window, GColorWhite);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
     .unload = main_window_unload,
