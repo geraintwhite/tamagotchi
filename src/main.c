@@ -5,6 +5,7 @@ static Window *s_main_window;
 static GBitmap *s_bitmap;
 static BitmapLayer *s_bitmap_layer;
 static TextLayer *s_time_layer;
+static AppTimer *creature_state_timer;
 
 static uint32_t creature_states[2] = {RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2};
 static int current_state = 0;
@@ -18,7 +19,7 @@ change_creature_state()
   s_bitmap = gbitmap_create_with_resource(creature_states[current_state]);
   bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
   layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
-  app_timer_register(500, change_creature_state, NULL);
+  creature_state_timer = app_timer_register(500, change_creature_state, NULL);
 }
 
 static void
