@@ -1,36 +1,76 @@
 {
-    "appKeys": {},
-    "capabilities": [
-        ""
-    ],
-    "companyName": "geraintwhite@gmail.com",
-    "enableMultiJS": true,
-    "longName": "TAMAGOTCHI",
-    "projectType": "native",
-    "resources": {
-        "media": [
-            {
-                "file": "images/001-sprat-idle1.png",
-                "name": "001_SPRAT_IDLE1",
-                "type": "png"
-            },
-            {
-                "file": "images/001-sprat-idle2.png",
-                "name": "001_SPRAT_IDLE2",
-                "type": "png"
-            },
-            {
-                "file": "images/001-sprat-egg.png",
-                "name": "001_SPRAT_EGG",
-                "type": "png"
-            }
-        ]
-    },
-    "sdkVersion": "3",
-    "shortName": "TAMAGOTCHI",
-    "uuid": "026e3bb9-a6b0-45da-b399-a1e44eeb37c2",
-    "versionLabel": "1.0",
-    "watchapp": {
-        "watchface": true
-    }
+  "appKeys": {},
+  "capabilities": [
+    ""
+  ],
+  "companyName": "BradGer ain't Sullivan",
+  "enableMultiJS": true,
+  "longName": "TAMAGOTCHI",
+  "projectType": "native",
+  "resources": {
+    "media": [
+      {
+        "file": "images/001-sprat-egg1.png",
+        "name": "001_SPRAT_EGG1",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-egg2.png",
+        "name": "001_SPRAT_EGG2",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-cracked.png",
+        "name": "001_SPRAT_CRACKED",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-idle1.png",
+        "name": "001_SPRAT_IDLE1",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-idle2.png",
+        "name": "001_SPRAT_IDLE2",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-sleep.png",
+        "name": "001_SPRAT_SLEEP",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-sick.png",
+        "name": "001_SPRAT_SICK",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-hungry.png",
+        "name": "001_SPRAT_HUNGRY",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-dirty.png",
+        "name": "001_SPRAT_DIRTY",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-bored.png",
+        "name": "001_SPRAT_BORED",
+        "type": "png"
+      },
+      {
+        "file": "images/001-sprat-dead.png",
+        "name": "001_SPRAT_DEAD",
+        "type": "png"
+      }
+    ]
+  },
+  "sdkVersion": "3",
+  "shortName": "TAMAGOTCHI",
+  "uuid": "026e3bb9-a6b0-45da-b399-a1e44eeb37c2",
+  "versionLabel": "1.0",
+  "watchapp": {
+    "watchface": false
+  }
 }
