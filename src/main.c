@@ -23,8 +23,14 @@ static bool hatched = 0;
 struct Monster {
   int id;
   char name[16];
-  // what the current state is
-  // e.g. 0: egg, 1: idle, 2: sleeping, etc.
+  // 0: egg
+  // 1: idle
+  // 2: sleeping
+  // 3: sick
+  // 4: hungry
+  // 5: dirty
+  // 6: bored
+  // 7: dead
   int state;
 
   // both between 0 and 1
@@ -79,12 +85,29 @@ static void display_image(uint32_t resource) {
   layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
 }
 
+static void animation_loop() {
+  display_image(animation_sequence[animation_frame]);
+  animation_frame = (animation_frame + 1) % total_frames;
+  app_timer_register(1000, animation_loop, NULL);
+}
+
+static void start_idle_animation(struct Monster monster) {
+  animation_sequence[0] = monster.idle_states[0];
+  animation_sequence[1] = monster.idle_states[1];
+  total_frames = 2;
+
+  animation_loop();
+}
+
 static void single_animation() {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Frame: %d, Total frames: %d", animation_frame, total_frames);
   display_image(animation_sequence[animation_frame]);
   if(animation_frame == total_frames - 1) {
     memset(animation_sequence, 0, sizeof(animation_sequence));
     total_frames = 0;
+    // This made the last image of this single animation not appear
+    // and is also wrong because not generic, was just for testing
+    // start_idle_animation(sprat);
     return;
   }
   animation_frame = (animation_frame + 1) % total_frames;
@@ -100,7 +123,9 @@ static void start_hatch_animation(struct Monster monster) {
   total_frames = 4;
 
   single_animation();
+  return;
 }
+
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   time_t temp = mktime(tick_time);
@@ -118,13 +143,18 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   // this is OP for testing purposes
   // adding 0.01 per second atm (elapsed_time/100) @ full heat points
   // 0.01 per minute = 0.00016667 per second (elapsed_time/6000)
-  sprat.hatch_points += ((double)elapsed_time / 100) * sprat.heat_points;
+  if(!hatched) {
+    sprat.hatch_points += ((double)elapsed_time / 100) * sprat.heat_points;
+  }
 
   if(sprat.hatch_points >= 1 && !hatched) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "YOU HATCHED THE EGG!");
     hatched = true;
     start_hatch_animation(sprat);
-    // start the hatch animation
+    sprat.state = 1;
+    // don't know how to get this to run AFTER the hatch animation has finished
+    // There's probably a better way to implement animating that app_timer_register
+    // but idk what it is at the moment
+    // start_idle_animation(sprat);
   }
 
   // This is just for printing and testing delete before release!!
