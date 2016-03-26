@@ -8,6 +8,59 @@ static TextLayer *s_time_layer;
 static uint32_t creature_states[2] = {RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2};
 static int current_state = 0;
 
+// make start time install time or first run time
+// then store it in memory and get from there instead of setting to 0 every time
+static int start_time = 0L;
+static int last_time = 0L;
+
+static bool hatched = 0;
+
+//#define time_t START_TIME = time(NULL);
+
+struct Monster {
+  int id;
+  char name[16];
+  // what the current state is
+  // e.g. 0: egg, 1: idle, 2: sleeping, etc.
+  int state;
+
+  // both between 0 and 1
+  // having these as doubles allows smaller increments than 1 per minute
+  double hatch_points;
+  double heat_points;
+
+  // Couldn't think of a better way to store each type of state, this'll do for now
+  uint32_t egg_states[2];
+  uint32_t cracked_states[2];
+  uint32_t idle_states[2];
+  uint32_t sleep_states[2];
+  uint32_t sick_states[2];
+  uint32_t hungry_states[2];
+  uint32_t dirty_states[2];
+  uint32_t bored_states[2];
+  uint32_t dead_states[2];
+};
+
+static struct Monster sprat;
+
+// Make a default monster (sprat)
+const struct Monster MONSTER_DEFAULT ={
+  1,
+  "sprat",
+  0,
+  0.0,
+  1.0, // set to 1 for testing
+  { RESOURCE_ID_001_SPRAT_EGG1, RESOURCE_ID_001_SPRAT_EGG2 },
+  { RESOURCE_ID_001_SPRAT_CRACKED },
+  { RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2 },
+  { RESOURCE_ID_001_SPRAT_SLEEP },
+  { RESOURCE_ID_001_SPRAT_SICK },
+  { RESOURCE_ID_001_SPRAT_HUNGRY },
+  { RESOURCE_ID_001_SPRAT_DIRTY },
+  { RESOURCE_ID_001_SPRAT_BORED },
+  { RESOURCE_ID_001_SPRAT_DEAD }
+};
+
 static void update_time() {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
@@ -17,6 +70,42 @@ static void update_time() {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  time_t temp = mktime(tick_time);
+  int current_time = (int)temp;
+
+  if(start_time == 0) {
+    start_time = current_time;
+    last_time = current_time;
+  }
+
+  int total_elapsed_time = current_time - start_time;
+  int elapsed_time = current_time - last_time;
+  last_time = current_time;
+
+  // this is OP for testing purposes
+  // adding 0.01 per second atm (elapsed_time/100) @ full heat points
+  // 0.01 per minute = 0.00016667 per second (elapsed_time/6000)
+  sprat.hatch_points += ((double)elapsed_time / ((/*60.0 **/ 60.0) * (5.0/3.0))) * sprat.heat_points;
+
+  if(sprat.hatch_points >= 1 && !hatched) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "YOU HATCHED THE EGG!");
+    hatched = true;
+    // start the hatch animation
+  }
+
+  // This is just for printing and testing delete before release!!
+  int big_hatch_points = (int)(sprat.hatch_points * 10000);
+  int hatch_whole = big_hatch_points / 100;
+  int hatch_decimal = big_hatch_points % 100;
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Current time: %d, Total elapsed time: %d, Hatch percent: %d.%d",
+                                current_time,
+                                total_elapsed_time,
+                                hatch_whole,
+                                hatch_decimal
+  );
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Last elapsed time: %d", elapsed_time);
+
   update_time();
 }
 
@@ -29,11 +118,8 @@ static void change_creature_state() {
   app_timer_register(500, change_creature_state, NULL);
 }
 
-static Animation * create_animation(struct GRect s) {
-  int r = (rand() % 11) - 5;
-  GRect end = GRect(s.origin.x + r, s.origin.y, s.size.w, s.size.h);
-
-  PropertyAnimation *prop_anim = property_animation_create_layer_frame((Layer*)s_bitmap_layer, &s, &end);
+static Animation * create_animation(struct GRect start, struct GRect end) {
+  PropertyAnimation *prop_anim = property_animation_create_layer_frame((Layer*)s_bitmap_layer, &start, &end);
   Animation *anim = property_animation_get_animation(prop_anim);
 
   int delay_ms = 0;
@@ -45,33 +131,42 @@ static Animation * create_animation(struct GRect s) {
   return anim;
 }
 
-static void start_egg_sequence() {
+static GRect get_random_end_rect(struct GRect start) {
+  int r = (rand() % 9) - 4;
+  GRect end = GRect(start.origin.x + r, start.origin.y, start.size.w, start.size.h);
+  return end;
+}
+
+static void start_egg_sequence(struct Monster m) {
   gbitmap_destroy(s_bitmap);
-  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_EGG);
+  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_EGG1);
   bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
   layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
 
   int closeness_to_hatching = 1500;
 
-  GRect start = GRect(0, 30, 144, 168);
-  Animation *anim0 = create_animation(start);
-  Animation *anim1 = create_animation(start);
-  Animation *anim2 = create_animation(start);
-  Animation *anim3 = create_animation(start);
-  Animation *anim4 = create_animation(start);
+  GRect start = GRect(0, 0, 144, 168);
+  Animation *anim0 = create_animation(start, get_random_end_rect(start));
+  Animation *anim1 = create_animation(start, get_random_end_rect(start));
+  Animation *anim2 = create_animation(start, get_random_end_rect(start));
+  Animation *anim3 = create_animation(start, get_random_end_rect(start));
+  Animation *anim4 = create_animation(start, get_random_end_rect(start));
 
   Animation *final_anim = animation_sequence_create(anim0, anim1, anim2, anim3, anim4, NULL);
 
 
   animation_schedule(final_anim);
-  app_timer_register(closeness_to_hatching, start_egg_sequence, NULL);
+  // app_timer_register(closeness_to_hatching, start_egg_sequence, NULL);
 }
 
 static void main_window_load(Window *window) {
+  // lmao app logs can't be that long
+  // abcd on the end isn't printed
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456abcd");
+  sprat = MONSTER_DEFAULT;
+
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-  // Make the egg show slightly lower
-  GRect egg_bounds = (GRect(0, 30, bounds.size.w, bounds.size.h));
 
   // Time stuff
   s_time_layer = text_layer_create(GRect(0, 8, bounds.size.w, 50));
@@ -85,10 +180,10 @@ static void main_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
 
   // s_bitmap_layer = bitmap_layer_create(bounds);
-  s_bitmap_layer = bitmap_layer_create(egg_bounds);
+  s_bitmap_layer = bitmap_layer_create(bounds);
 
   //change_creature_state();
-  start_egg_sequence();
+  start_egg_sequence(sprat);
 
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
   layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));

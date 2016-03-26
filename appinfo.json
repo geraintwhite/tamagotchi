@@ -3,7 +3,7 @@
   "capabilities": [
     ""
   ],
-  "companyName": "BradGer ain't Sullivan",
+  "companyName": "Monster Crew",
   "enableMultiJS": true,
   "longName": "TAMAGOTCHI",
   "projectType": "native",
@@ -71,6 +71,6 @@
   "uuid": "026e3bb9-a6b0-45da-b399-a1e44eeb37c2",
   "versionLabel": "1.0",
   "watchapp": {
-    "watchface": false
+    "watchface": true
   }
 }
