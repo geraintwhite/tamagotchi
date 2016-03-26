@@ -5,8 +5,11 @@ static GBitmap *s_bitmap;
 static BitmapLayer *s_bitmap_layer;
 static TextLayer *s_time_layer;
 
-static uint32_t creature_states[2] = {RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2};
+static uint32_t creature_states[2] = { RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2 };
+static uint32_t animation_sequence[10];
 static int current_state = 0;
+static int animation_frame = 0;
+static int total_frames = 0;
 
 // make start time install time or first run time
 // then store it in memory and get from there instead of setting to 0 every time
@@ -44,7 +47,7 @@ struct Monster {
 static struct Monster sprat;
 
 // Make a default monster (sprat)
-const struct Monster MONSTER_DEFAULT ={
+const struct Monster MONSTER_DEFAULT = {
   1,
   "sprat",
   0,
@@ -69,6 +72,36 @@ static void update_time() {
   text_layer_set_text(s_time_layer, s_buffer);
 }
 
+static void display_image(uint32_t resource) {
+  gbitmap_destroy(s_bitmap);
+  s_bitmap = gbitmap_create_with_resource(resource);
+  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+  layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
+}
+
+static void single_animation() {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Frame: %d, Total frames: %d", animation_frame, total_frames);
+  display_image(animation_sequence[animation_frame]);
+  if(animation_frame == total_frames - 1) {
+    memset(animation_sequence, 0, sizeof(animation_sequence));
+    total_frames = 0;
+    return;
+  }
+  animation_frame = (animation_frame + 1) % total_frames;
+  app_timer_register(2000, single_animation, NULL);
+}
+
+static void start_hatch_animation(struct Monster monster) {
+  // uint32_t sequence[4] = { monster.egg_states[0], monster.egg_states[1], monster.cracked_states[0], monster.idle_states[0] };
+  animation_sequence[0] = monster.egg_states[0];
+  animation_sequence[1] = monster.egg_states[1];
+  animation_sequence[2] = monster.cracked_states[0];
+  animation_sequence[3] = monster.idle_states[0];
+  total_frames = 4;
+
+  single_animation();
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   time_t temp = mktime(tick_time);
   int current_time = (int)temp;
@@ -85,11 +118,12 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   // this is OP for testing purposes
   // adding 0.01 per second atm (elapsed_time/100) @ full heat points
   // 0.01 per minute = 0.00016667 per second (elapsed_time/6000)
-  sprat.hatch_points += ((double)elapsed_time / ((/*60.0 **/ 60.0) * (5.0/3.0))) * sprat.heat_points;
+  sprat.hatch_points += ((double)elapsed_time / 100) * sprat.heat_points;
 
   if(sprat.hatch_points >= 1 && !hatched) {
     APP_LOG(APP_LOG_LEVEL_DEBUG, "YOU HATCHED THE EGG!");
     hatched = true;
+    start_hatch_animation(sprat);
     // start the hatch animation
   }
 
@@ -138,10 +172,7 @@ static GRect get_random_end_rect(struct GRect start) {
 }
 
 static void start_egg_sequence(struct Monster m) {
-  gbitmap_destroy(s_bitmap);
-  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_001_SPRAT_EGG1);
-  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
-  layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
+  display_image(RESOURCE_ID_001_SPRAT_EGG1);
 
   int closeness_to_hatching = 1500;
 
@@ -179,7 +210,6 @@ static void main_window_load(Window *window) {
 
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
 
-  // s_bitmap_layer = bitmap_layer_create(bounds);
   s_bitmap_layer = bitmap_layer_create(bounds);
 
   //change_creature_state();
