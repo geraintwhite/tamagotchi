@@ -60,7 +60,7 @@ const struct Monster MONSTER_DEFAULT = {
   0,  // state
   0,  // age
   0.0,  // hatch_points
-  0.2,  // heat_points
+  0.0,  // heat_points
   1.0,  // health
   0.0,  // hunger
   1.0,  // cleanliness
@@ -80,13 +80,14 @@ const struct Monster MONSTER_DEFAULT = {
 /****** Button handling ******/
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   if(sprat.state == 0) {
-    sprat.heat_points += 0.005;
+    sprat.heat_points += 0.01; // 1%
   }
 }
 
 static void click_config_provider(void *context) {
   ButtonId id = BUTTON_ID_SELECT;
   window_single_click_subscribe(id, select_click_handler);
+  window_single_repeating_click_subscribe(id, 100, select_click_handler);
 }
 
 /****** Drawing lines and stuff ******/
@@ -176,10 +177,10 @@ static void update() {
   last_time = total_elapsed_time_ms;
 
   if(sprat.state == 0) {
-    sprat.hatch_points += ((double)elapsed_time_ms / 100000) * sprat.heat_points;
-    sprat.heat_points -= ((double)elapsed_time_ms / 100000) / 36; // 5 every 3 minutes (i think?)
+    sprat.hatch_points += (elapsed_time_ms * sprat.heat_points) / (60*60*1000);
+    sprat.heat_points -= ((double)1/12000) * sprat.heat_points; // 5 every 3 minutes (i think?)
     sprat.heat_points = sprat.heat_points >= 1 ? 1 :
-                        sprat.heat_points <= 0.01 ? 0 :
+                        sprat.heat_points <= 0 ? 0 :
                         sprat.heat_points;
 
     if(sprat.hatch_points >= 1) {
@@ -209,7 +210,7 @@ static void update() {
   int heat_decimal = big_heat_points % 1000;
 
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "s: %d, hap: %d.%02d, hep: %d.%03d, et: %d, tet: %d",
+  APP_LOG(APP_LOG_LEVEL_INFO, "s: %d, ha: %d.%02d%%, he: %d.%03d%%, et: %d, tet: %d",
                               sprat.state,
                               hatch_whole,
                               hatch_decimal,
