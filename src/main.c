@@ -1,10 +1,12 @@
 #include <pebble.h>
 #include <limits.h>
 
+#define RIGHT_EDGE  144
+#define BOTTOM_EDGE 168
+
 static Window *s_main_window;
 static GBitmap *s_bitmap;
 static Layer *s_canvas_layer;
-static BitmapLayer *s_bitmap_layer;
 static TextLayer *s_time_layer;
 static AppTimer *s_timer;
 
@@ -13,6 +15,7 @@ static int updates = 0;
 
 static int current_idle_frame = 0;
 static int hatch_animation_frame = 0;
+static int egg_state_counter = 0;
 
 
 // make start time install time or first run time
@@ -90,26 +93,84 @@ static void click_config_provider(void *context) {
   window_single_repeating_click_subscribe(id, 100, select_click_handler);
 }
 
-/****** Drawing lines and stuff ******/
+/****** Drawing lines and other stuff ******/
+static void display_image_on_canvas(uint32_t r, GContext *ctx) {
+  gbitmap_destroy(s_bitmap);
+  s_bitmap = gbitmap_create_with_resource(r);
+  graphics_draw_bitmap_in_rect(ctx, s_bitmap, GRect(0,0,144,168));
+}
+
+static void display_monster_state_on_canvas(struct Monster m, GContext *ctx) {
+  switch(m.state) {
+    case 0: // egg
+      if(egg_state_counter >= 5 / m.heat_points) {
+        egg_state_counter = 0;
+        current_idle_frame++;
+      } else {
+        egg_state_counter++;
+      }
+      display_image_on_canvas(m.egg_states[current_idle_frame % (sizeof(m.egg_states) / sizeof(uint32_t))], ctx);
+      break;
+
+    case 1: // hatching
+      switch(hatch_animation_frame / 16){
+        case 0:
+          display_image_on_canvas(m.egg_states[1], ctx);
+          break;
+        case 1:
+          display_image_on_canvas(m.egg_states[1], ctx);
+          display_image_on_canvas(m.cracked_states[0], ctx);
+          break;
+        case 2:
+          display_image_on_canvas(m.idle_states[0], ctx);
+          break;
+        default:
+          display_image_on_canvas(m.idle_states[0], ctx);
+          break;
+      }
+      hatch_animation_frame++;
+      break;
+
+    case 2: // idle
+      display_image_on_canvas(m.idle_states[(current_idle_frame / 5) % (sizeof(m.idle_states) / sizeof(uint32_t))], ctx);
+      current_idle_frame = current_idle_frame + 1;
+      break;
+  }
+}
+
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
+  graphics_context_set_compositing_mode(ctx, GCompOpSet);
+  display_monster_state_on_canvas(sprat, ctx);
+
   if(sprat.state == 0) {
     int l_edge = 10;
-    int r_edge = 134;
-    int bottom = 158;
-    int heat_point_line_end = l_edge + (r_edge - l_edge) * sprat.heat_points;
+    int r_edge = RIGHT_EDGE - l_edge;
+    int length = r_edge - l_edge;
+    int t_edge = 156;
+    int b_edge = t_edge + 8;
+    int height = b_edge - t_edge;
+    int heat_point_line_end = length * sprat.heat_points;
+    int hatch_point_line_end = length * sprat.hatch_points;
 
-    graphics_context_set_stroke_color(ctx, GColorBlack);
-    graphics_context_set_stroke_width(ctx, 5);
+    graphics_context_set_stroke_width(ctx, 0);
     graphics_context_set_antialiased(ctx, false);
+    GRect background = GRect(l_edge, t_edge, length, height);
 
-    GPoint start = GPoint(l_edge, bottom);
-    GPoint end = GPoint(r_edge, bottom);
-    graphics_draw_line(ctx, start, end);
+    GRect hatch_rect = GRect(l_edge, t_edge, hatch_point_line_end, height / 2);
+    GRect heat_rect = GRect(l_edge, t_edge + (height / 2), heat_point_line_end, height / 2);
 
-    graphics_context_set_stroke_color(ctx, GColorRed);
+    int corner_radius = 0;
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, background, corner_radius, GCornersAll);
 
-    end = GPoint(heat_point_line_end, bottom);
-    graphics_draw_line(ctx, start, end);
+    graphics_context_set_fill_color(ctx, GColorGreen);
+    graphics_fill_rect(ctx, hatch_rect, corner_radius, GCornersTop);
+
+    graphics_context_set_fill_color(ctx, GColorOrange);
+    graphics_fill_rect(ctx, heat_rect, corner_radius, GCornersBottom);
+
+    // graphics_draw_bitmap_in_rect
+    // use this to draw multiple bitmaps ontop of each other
   }
 }
 
@@ -119,46 +180,6 @@ static void update_time() {
   static char s_buffer[8];
   strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
   text_layer_set_text(s_time_layer, s_buffer);
-}
-
-
-static void display_image(uint32_t resource) {
-  gbitmap_destroy(s_bitmap);
-  s_bitmap = gbitmap_create_with_resource(resource);
-  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
-}
-
-static void display_monster_state(struct Monster m) {
-  switch(m.state){
-    case 0: // egg
-      display_image(m.egg_states[current_idle_frame]);
-      current_idle_frame = (current_idle_frame + 1) % (sizeof(m.egg_states) / sizeof(uint32_t));
-      break;
-
-    case 1: // hatching
-      // APP_LOG(APP_LOG_LEVEL_DEBUG, "frame: %d", hatch_animation_frame/4);
-
-      switch(hatch_animation_frame / 4){
-        case 0:
-          display_image(m.egg_states[1]);
-          break;
-        case 1:
-          display_image(m.cracked_states[0]);
-          break;
-        case 2:
-          display_image(m.idle_states[0]);
-          break;
-        default:
-          break;
-      }
-      hatch_animation_frame = hatch_animation_frame + 1;
-      break;
-
-    case 2: // idle
-      display_image(m.idle_states[current_idle_frame]);
-      current_idle_frame = (current_idle_frame + 1) % (sizeof(m.idle_states) / sizeof(uint32_t));
-      break;
-  }
 }
 
 static void update() {
@@ -190,11 +211,6 @@ static void update() {
     }
   }
 
-  updates++;
-  if(updates % (int)(5 / (sprat.state == 0 ? sprat.heat_points : 1)) == 0) {
-    display_monster_state(sprat);
-  }
-
   if(sprat.state == 1 && (sprat.hatch_update + 5*4*3) <= updates) {
     sprat.state = 2;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Hatched");
@@ -219,12 +235,13 @@ static void update() {
                               elapsed_time_ms,
                               total_elapsed_time_ms);
   */
+
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
 }
-
+/*
 static Animation * create_animation(struct GRect start, struct GRect end) {
   PropertyAnimation *prop_anim = property_animation_create_layer_frame((Layer*)s_bitmap_layer, &start, &end);
   Animation *anim = property_animation_get_animation(prop_anim);
@@ -260,16 +277,14 @@ static void start_egg_sequence(struct Monster m) {
   animation_schedule(final_anim);
   // app_timer_register(1500, start_egg_sequence, NULL);
 }
-
+*/
 static void timer_callback() {
   update();
-  layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
   layer_mark_dirty(s_canvas_layer);
   s_timer = app_timer_register(delta, timer_callback, NULL);
 }
 
 static void start() {
-  display_monster_state(sprat);
   s_timer = app_timer_register(delta, timer_callback, NULL);
 }
 
@@ -299,17 +314,12 @@ static void main_window_load(Window *window) {
   // change_creature_state();
   // start_egg_sequence(sprat);
 
-  // Bitmap drawing stuff
-  s_bitmap_layer = bitmap_layer_create(bounds);
-
-  bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
-  layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
   start();
 }
 
 static void main_window_unload(Window *window) {
-  bitmap_layer_destroy(s_bitmap_layer);
   gbitmap_destroy(s_bitmap);
+  layer_destroy(s_canvas_layer);
   text_layer_destroy(s_time_layer);
   app_timer_cancel(s_timer);
 }
