@@ -17,7 +17,6 @@ static int current_idle_frame = 0;
 static int hatch_animation_frame = 0;
 static int egg_state_counter = 0;
 
-
 // make start time install time or first run time
 // then store it in memory and get from there instead of setting to 0 every time
 static int start_time = 0L;
@@ -198,8 +197,8 @@ static void update() {
   last_time = total_elapsed_time_ms;
 
   if(sprat.state == 0) {
-    sprat.hatch_points += (elapsed_time_ms * sprat.heat_points) / (60*60*1000);
-    sprat.heat_points -= ((double)1/12000) * sprat.heat_points; // 5 every 3 minutes (i think?)
+    sprat.hatch_points += (elapsed_time_ms * sprat.heat_points) / (60*60*1000); // 0.01 every minute
+    sprat.heat_points -= ((double)1/12000) * sprat.heat_points; // 0.05 every minute
     sprat.heat_points = sprat.heat_points >= 1 ? 1 :
                         sprat.heat_points <= 0 ? 0 :
                         sprat.heat_points;
@@ -207,14 +206,14 @@ static void update() {
     if(sprat.hatch_points >= 1) {
       sprat.state = 1;
       sprat.hatch_update = updates;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Hatching!");
     }
   }
 
   if(sprat.state == 1 && (sprat.hatch_update + 5*4*3) <= updates) {
     sprat.state = 2;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Hatched");
   }
+
+  updates++;
 
   /*
   int big_hatch_points = sprat.hatch_points * 10000;
