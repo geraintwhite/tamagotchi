@@ -32,12 +32,12 @@ struct Monster {
   // between 0 and 1
   // having these as doubles allows smaller increments than 1 per minute
   // because logic is only updated once per minute
-  double hatch_points;
-  double heat_points;
-  double health;
-  double hunger;
-  double cleanliness;
-  double boredom;
+  int hatch_points;
+  int heat_points;
+  int health;
+  int hunger;
+  int cleanliness;
+  int boredom;
 
   uint32_t egg_states[2];
   uint32_t cracked_states[2];
@@ -59,14 +59,15 @@ static struct Monster sprat;
 const struct Monster MONSTER_DEFAULT = {
   1,  // id
   "sprat",
+  // all these values are between 0 and 1000000
   0,  // state
   0,  // age
-  0.0,  // hatch_points
-  0.0,  // heat_points
-  1.0,  // health
-  0.0,  // hunger
-  1.0,  // cleanliness
-  0.0,  // boredom
+  0,  // hatch_points
+  0,  // heat_points
+  1000000,  // health
+  0,  // hunger
+  1000000,  // cleanliness
+  0,  // boredom
   { RESOURCE_ID_001_SPRAT_EGG1, RESOURCE_ID_001_SPRAT_EGG2 },
   { RESOURCE_ID_001_SPRAT_CRACKED },
   { RESOURCE_ID_001_SPRAT_IDLE1, RESOURCE_ID_001_SPRAT_IDLE2 },
@@ -79,10 +80,17 @@ const struct Monster MONSTER_DEFAULT = {
   INT_MAX
 };
 
+/****** Persistent storage ******/
+static void store_monster_details(struct Monster m) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Storing: hatch_points: %d, heat_points: %d", m.hatch_points, m.heat_points);
+  persist_write_int(1, m.hatch_points);
+  persist_write_int(2, m.heat_points);
+}
+
 /****** Button handling ******/
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   if(sprat.state == 0) {
-    sprat.heat_points += 0.01; // 1%
+    sprat.heat_points += 10000; // 1% of 1000000
   }
 }
 
@@ -102,7 +110,7 @@ static void display_image_on_canvas(uint32_t r, GContext *ctx) {
 static void display_monster_state_on_canvas(struct Monster m, GContext *ctx) {
   switch(m.state) {
     case 0: // egg
-      if(egg_state_counter >= 5 / m.heat_points) {
+      if(egg_state_counter >= 5 / (m.heat_points / 1000000.0)) {
         egg_state_counter = 0;
         current_idle_frame++;
       } else {
@@ -148,8 +156,8 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
     int t_edge = 156;
     int b_edge = t_edge + 8;
     int height = b_edge - t_edge;
-    int heat_point_line_end = length * sprat.heat_points;
-    int hatch_point_line_end = length * sprat.hatch_points;
+    int heat_point_line_end = length * sprat.heat_points / 1000000.0;
+    int hatch_point_line_end = length * sprat.hatch_points / 1000000.0;
 
     graphics_context_set_stroke_width(ctx, 0);
     graphics_context_set_antialiased(ctx, false);
@@ -197,13 +205,13 @@ static void update() {
   last_time = total_elapsed_time_ms;
 
   if(sprat.state == 0) {
-    sprat.hatch_points += (elapsed_time_ms * sprat.heat_points) / (60*60*1000); // 0.01 every minute
-    sprat.heat_points -= ((double)1/12000) * sprat.heat_points; // 0.05 every minute
-    sprat.heat_points = sprat.heat_points >= 1 ? 1 :
+    sprat.hatch_points += (elapsed_time_ms * sprat.heat_points) / (60*60*1000); // 10000 every minute
+    sprat.heat_points -= ((double)1/12000) * sprat.heat_points; // 5% every minute
+    sprat.heat_points = sprat.heat_points >= 1000000 ? 1000000 :
                         sprat.heat_points <= 0 ? 0 :
                         sprat.heat_points;
 
-    if(sprat.hatch_points >= 1) {
+    if(sprat.hatch_points >= 1000000) {
       sprat.state = 1;
       sprat.hatch_update = updates;
     }
@@ -289,6 +297,14 @@ static void start() {
 
 static void main_window_load(Window *window) {
   sprat = MONSTER_DEFAULT;
+  if(persist_exists(1)) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "reading from 1: %ld", persist_read_int(1));
+    sprat.hatch_points = persist_read_int(1);
+  }
+  if(persist_exists(2)) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "reading from 2: %ld", persist_read_int(2));
+    sprat.heat_points = persist_read_int(2);
+  }
 
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -317,6 +333,7 @@ static void main_window_load(Window *window) {
 }
 
 static void main_window_unload(Window *window) {
+  store_monster_details(sprat);
   gbitmap_destroy(s_bitmap);
   layer_destroy(s_canvas_layer);
   text_layer_destroy(s_time_layer);
